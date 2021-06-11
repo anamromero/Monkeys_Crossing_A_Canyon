@@ -4,15 +4,20 @@ class Rope(){
     var n_waiting_west: Int = 0
     var n_crossing: Int = 0
     var direction_now: Int = 0
+    var change_direction: Boolean = false
 
     def arrive(direction: Int){
         this.synchronized {
             var dir_str: String = ""
 
             // Direction of the rope
+            if (n_crossing > 0 && direction != direction_now && !change_direction){
+                change_direction = true
+                println("Changing direction in order to avoid starvation")
+            }
             if (n_crossing == 0 && n_waiting_east == 0 && n_waiting_west == 0){
                 direction_now = direction
-                println("------------------ Direction_now settled to " + direction_now + " -----------------")
+                println("----------------- Direction now settled to " + direction_now + " -----------------")
             }
 
             if (direction == 0){
@@ -30,8 +35,8 @@ class Rope(){
     
     def cross(direction: Int){
         this.synchronized {
-            while (direction_now != direction){
-                println("Monkey " + Thread.currentThread().getName() + " waiting\t\t\t      |")
+            while (direction_now != direction || (direction_now == direction && change_direction)){
+                println("Monkey " + Thread.currentThread().getName() + " waiting for the rope to be empty. |")
                 wait()
                 Thread.sleep(1000)  // Minimum inter-monkey spacing is 1 second
             }
@@ -56,13 +61,20 @@ class Rope(){
 
             // If no monkey is crossing
             if (n_crossing == 0){
-                if (n_waiting_east == 0 && n_waiting_west > 0){
+                // Change direction to requested
+                if (change_direction){
+                    direction_now = (direction_now + 1) % 2
+                    println("------------------ Direction now settled to " + direction_now + " -----------------")
+                    change_direction = false
+                }
+
+                else if (n_waiting_east == 0 && n_waiting_west > 0){
                     direction_now = 1
-                    println("------------------ Direction_now settled to " + direction_now + " -----------------")
+                    println("----------------- Direction now settled to " + direction_now + " -----------------")
                 }
                 else if (n_waiting_east > 0 && n_waiting_west == 0){
                     direction_now = 0
-                    println("------------------ Direction_now settled to " + direction_now + " -----------------")
+                    println("----------------- Direction now settled to " + direction_now + " -----------------")
                 }
                 notifyAll()
             }
